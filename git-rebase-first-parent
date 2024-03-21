@@ -1,0 +1,119 @@
+#!/bin/sh
+#-
+# Copyright (c) 2024 Jessica Clarke
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+# SUCH DAMAGE.
+#
+
+set -e
+set -u
+
+info() {
+	echo >&2 "info:" "$@"
+}
+
+warn() {
+	echo >&2 "warning:" "$@"
+}
+
+die() {
+	echo >&2 "fatal:" "$@"
+	exit 1
+}
+
+OPTS_SPEC="\
+git rebase-first-parent [-i | --interactive] [--onto <newbase>] [<upstream> [<branch>]]
+--
+h,help        show the help
+
+i,interactive let the user edit the list of commits to rebase
+onto=newbase  rebase onto given branch instead of upstream"
+
+usage() {
+	if [ $# -gt 0 ]; then
+		echo >&2 "error:" "$@"
+	fi
+	eval "$(echo "$OPTS_SPEC" | git rev-parse --parseopt -- -h)"
+	exit 1
+}
+
+eval "$(echo "$OPTS_SPEC" | git rev-parse --parseopt --stuck-long -- "$@" || echo exit $?)"
+
+unset INTERACTIVE
+unset ONTO
+while [ $# -gt 0 ]; do
+	case "$1" in
+	--interactive)
+		INTERACTIVE=1
+		;;
+	--onto=*)
+		ONTO="${1#--onto=}"
+		;;
+	--)
+		shift
+		break
+		;;
+	-*)
+		fatal "unhandled option $1"
+		;;
+	esac
+	shift
+done
+
+if [ $# -gt 0 ]; then
+	UPSTREAM="$1"
+else
+	UPSTREAM=HEAD
+fi
+
+if [ $# -gt 1 ]; then
+	BRANCH="$2"
+fi
+
+if [ $# -gt 2 ]; then
+	usage
+fi
+
+if [ -n "${BRANCH+set}" ]; then
+	set -- "$BRANCH" "$BRANCH"
+else
+	set -- HEAD
+	BRANCH=HEAD
+fi
+
+if [ -z "${ONTO+set}" ]; then
+	ONTO="$UPSTREAM"
+fi
+set -- "--onto=$ONTO" "$@"
+
+set -- --interactive "$@"
+
+if [ -n "${INTERACTIVE+set}" ]; then
+	if [ -n "${GIT_SEQUENCE_EDITOR+set}" ]; then
+		GIT_REBASE_FIRST_PARENT_SEQUENCE_EDITOR="$GIT_SEQUENCE_EDITOR"
+	elif ! GIT_REBASE_FIRST_PARENT_SEQUENCE_EDITOR="`git config sequence.editor`"; then
+		GIT_REBASE_FIRST_PARENT_SEQUENCE_EDITOR="`git var GIT_EDITOR`"
+	fi
+	export GIT_REBASE_FIRST_PARENT_SEQUENCE_EDITOR
+fi
+
+env GIT_SEQUENCE_EDITOR=git-rebase-first-parent-sequence-editor GIT_REBASE_FIRST_PARENT_UPSTREAM="$UPSTREAM" GIT_REBASE_FIRST_PARENT_BRANCH="$BRANCH" git rebase "$@"
