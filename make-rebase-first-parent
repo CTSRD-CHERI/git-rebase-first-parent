@@ -47,9 +47,9 @@ git log --first-parent --reverse --format='tformat:%H %P#%s' "$1".."$2" | while 
 	p="${l#* }"
 	p="`echo "$p" | sed 's/^[[:space:]]*[^[:space:]]\+//;s/[[:space:]]*\([^[:space:]]\+\)/ -p \1/g'`"
 	if [ -z "$p" ]; then
-		echo "pick $c $s"
+		printf 'pick %s %s\n' "$c" "$s"
 	else
-		echo "# $s"
+		printf '# %s\n' "$s"
 		echo "exec git update-ref HEAD \`git commit-tree -p HEAD$p -m 'dummy merge for $c' 'HEAD^{tree}'\` && git cherry-pick -n -m 1 $c && git commit --amend -q -n -C $c"
 	fi
 done
