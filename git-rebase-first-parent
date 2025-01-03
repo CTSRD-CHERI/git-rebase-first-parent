@@ -43,10 +43,10 @@ die() {
 OPTS_SPEC="\
 git rebase-first-parent [-i | --interactive] [--onto <newbase>] [<upstream> [<branch>]]
 --
-h,help        show the help
+h,help!        show the help
 
-i,interactive let the user edit the list of commits to rebase
-onto=newbase  rebase onto given branch instead of upstream"
+i,interactive! let the user edit the list of commits to rebase
+onto!=newbase  rebase onto given branch instead of upstream"
 
 usage() {
 	if [ $# -gt 0 ]; then
