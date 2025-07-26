@@ -56,7 +56,7 @@ usage() {
 	exit 1
 }
 
-eval "$(echo "$OPTS_SPEC" | git rev-parse --parseopt --keep-dashdash --stuck-long -- "$@" || echo exit $?)"
+eval "$(echo "$OPTS_SPEC" | git rev-parse --parseopt --stuck-long -- "$@" || echo exit $?)"
 
 unset INTERACTIVE
 unset ONTO
