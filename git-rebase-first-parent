@@ -43,10 +43,11 @@ die() {
 OPTS_SPEC="\
 git rebase-first-parent [-i | --interactive] [--onto <newbase>] [<upstream> [<branch>]]
 --
-h,help        show the help
+h,help!        show the help
 
-i,interactive let the user edit the list of commits to rebase
-onto=newbase  rebase onto given branch instead of upstream"
+i,interactive! let the user edit the list of commits to rebase
+x,exec!=cmd run command after each commit (e.g. to check compilation)
+onto!=newbase  rebase onto given branch instead of upstream"
 
 usage() {
 	if [ $# -gt 0 ]; then
@@ -60,6 +61,7 @@ eval "$(echo "$OPTS_SPEC" | git rev-parse --parseopt --stuck-long -- "$@" || ech
 
 unset INTERACTIVE
 unset ONTO
+GIT_REBASE_FIRST_PARENT_EXEC_CMDS=
 while [ $# -gt 0 ]; do
 	case "$1" in
 	--interactive)
@@ -67,6 +69,9 @@ while [ $# -gt 0 ]; do
 		;;
 	--onto=*)
 		ONTO="${1#--onto=}"
+		;;
+	--exec=*)
+		GIT_REBASE_FIRST_PARENT_EXEC_CMDS="${GIT_REBASE_FIRST_PARENT_EXEC_CMDS}exec ${1#--exec=}\n"
 		;;
 	--)
 		shift
@@ -115,5 +120,8 @@ if [ -n "${INTERACTIVE+set}" ]; then
 	fi
 	export GIT_REBASE_FIRST_PARENT_SEQUENCE_EDITOR
 fi
+# The variable GIT_REBASE_FIRST_PARENT_EXEC_CMDS is interpreted by
+# make-rebase-first-parent to add extra "exec" lines to each rebase step.
+export GIT_REBASE_FIRST_PARENT_EXEC_CMDS
 
 env GIT_SEQUENCE_EDITOR=git-rebase-first-parent-sequence-editor GIT_REBASE_FIRST_PARENT_UPSTREAM="$UPSTREAM" GIT_REBASE_FIRST_PARENT_BRANCH="$BRANCH" git rebase "$@"
