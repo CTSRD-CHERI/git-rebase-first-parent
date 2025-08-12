@@ -48,6 +48,20 @@ if [ -z "${GIT_REBASE_FIRST_PARENT_BRANCH:-}" ]; then
 	die "GIT_REBASE_FIRST_PARENT_BRANCH is not set"
 fi
 
+# This is effectively make-rebase-first-parent [...] <"$1" >"$1" but using a
+# temporary copy so as to not overwrite the input it's reading. In terms of
+# what each command's file descriptors end up as it's:
+#
+#   cat <"$1" >"$TMPFILE"
+#   make-rebase-first-parent [...] <"$TMPFILE" >"$1"
+#
+# but it's done as a single compound command with file descriptors for TMPFILE
+# already open so that we can rm it early and avoid needing to deal with
+# writing robust, portable trap statements.
+#
+# There is a small window where TMPFILE will be left behind but this is
+# hopefully short enough to not be a problem in practice, and the file left
+# behind will always be empty.
 TMPFILE="`mktemp`"
 { rm "$TMPFILE" && cat <"$1" && make-rebase-first-parent "$GIT_REBASE_FIRST_PARENT_UPSTREAM" "$GIT_REBASE_FIRST_PARENT_BRANCH" >"$1"; } <"$TMPFILE" >"$TMPFILE"
 if [ -n "${GIT_REBASE_FIRST_PARENT_SEQUENCE_EDITOR:+set}" ]; then
