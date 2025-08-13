@@ -45,12 +45,15 @@ git log --first-parent --reverse --format='tformat:%H %P#%s' "$1".."$2" | while 
 	l="${l%%#*}"
 	c="${l%% *}"
 	p="${l#* }"
-	p="`echo "$p" | sed 's/^[[:space:]]*[^[:space:]]\{1,\}//;s/[[:space:]]*\([^[:space:]]\{1,\}\)/ -p \1/g'`"
+	p="$(echo "$p" | sed 's/^[[:space:]]*[^[:space:]]\{1,\}//;s/[[:space:]]*\([^[:space:]]\{1,\}\)/ -p \1/g')"
 	if [ -z "$p" ]; then
 		printf 'pick %s %s\n' "$c" "$s"
 	else
 		printf '# %s\n' "$s"
 		echo "exec git update-ref HEAD \`git commit-tree -p HEAD$p -m 'dummy merge for $c' 'HEAD^{tree}'\` && git cherry-pick -n -m 1 $c && git commit --amend -q -n -C $c"
+	fi
+	if [ -n "${GIT_REBASE_FIRST_PARENT_EXEC_CMDS}" ]; then
+		printf "%b" "${GIT_REBASE_FIRST_PARENT_EXEC_CMDS}"
 	fi
 done
 
